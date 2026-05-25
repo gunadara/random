@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>소재 뽑기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Noto+Sans+KR:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #1a1a1f;
+    --border: #2e2e38;
+    --text: #e8e8f0;
+    --muted: #666680;
+    --accent: #c8a97e;
+    --accent2: #7e9fc8;
+    --danger: #c87e7e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 60px;
+  }
+
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 32px;
+  }
+
+  /* 결과 표시 */
+  .result-area {
+    width: 100%;
+    max-width: 420px;
+    min-height: 110px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(200,169,126,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .result-word {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.25rem;
+    color: var(--accent);
+    padding: 6px 14px;
+    border: 1px solid rgba(200,169,126,0.3);
+    border-radius: 6px;
+    background: rgba(200,169,126,0.06);
+    animation: fadeIn 0.35s ease;
+  }
+
+  .placeholder {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 카운트 설정 */
+  .count-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .count-row button {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .count-row button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .count-display {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1rem;
+    color: var(--text);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* 뽑기 버튼 */
+  .roll-btn {
+    width: 100%;
+    max-width: 420px;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    color: var(--accent);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-bottom: 32px;
+  }
+  .roll-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .roll-btn:active { opacity: 0.8; }
+
+  /* 단어 목록 */
+  .section-title {
+    width: 100%;
+    max-width: 420px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-title span { color: var(--accent2); font-size: 0.68rem; cursor: pointer; }
+  .section-title span:hover { text-decoration: underline; }
+
+  .word-list {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .word-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: var(--text);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .word-tag .del {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .word-tag .del:hover { color: var(--danger); }
+
+  /* 입력 */
+  .input-row {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .word-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .word-input:focus { border-color: var(--accent2); }
+  .word-input::placeholder { color: var(--muted); }
+
+  .add-btn {
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--accent2);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .add-btn:hover { border-color: var(--accent2); }
+
+  .empty-hint {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>소재 뽑기</h1>
+<p class="sub">단어를 추가하고 랜덤으로 뽑아보세요</p>
+
+<!-- 결과 -->
+<div class="result-area">
+  <div class="result-words" id="resultWords">
+    <span class="placeholder">뽑기 버튼을 누르세요</span>
+  </div>
+</div>
+
+<!-- 뽑을 개수 -->
+<div class="count-row">
+  <button onclick="changeCount(-1)">−</button>
+  <span class="count-display" id="countDisplay">3</span>
+  <button onclick="changeCount(1)">+</button>
+  <span>개 뽑기</span>
+</div>
+
+<!-- 뽑기 버튼 -->
+<button class="roll-btn" onclick="roll()">뽑 기</button>
+
+<!-- 단어 목록 -->
+<div class="section-title">
+  <span>단어 목록 (<span id="wordCount">0</span>개)</span>
+  <span onclick="resetDefault()">기본값으로 초기화</span>
+</div>
+
+<div class="word-list" id="wordList">
+  <div class="empty-hint" id="emptyHint">단어를 추가해보세요</div>
+</div>
+
+<!-- 입력 -->
+<div class="input-row">
+  <input class="word-input" id="wordInput" type="text" placeholder="단어 입력 후 추가 또는 엔터" maxlength="20">
+  <button class="add-btn" onclick="addWord()">추가</button>
+</div>
+
+<script>
+  const DEFAULT_WORDS = [
+    '거울','계단','달력','낯선 냄새','꺼진 전화',
+    '편지','빈 의자','새벽 세시','지하도','잠긴 문',
+    '반복','목소리','그림자','지도','녹슨 열쇠',
+    '사진','창문','안개','이름','마지막 버스'
+  ];
+
+  let words = [...DEFAULT_WORDS];
+  let count = 3;
+
+  function render() {
+    const list = document.getElementById('wordList');
+    const hint = document.getElementById('emptyHint');
+    const countEl = document.getElementById('wordCount');
+    countEl.textContent = words.length;
+
+    // clear tags (keep hint)
+    Array.from(list.querySelectorAll('.word-tag')).forEach(el => el.remove());
+
+    if (words.length === 0) {
+      hint.style.display = 'block';
+    } else {
+      hint.style.display = 'none';
+      words.forEach((w, i) => {
+        const tag = document.createElement('div');
+        tag.className = 'word-tag';
+        tag.innerHTML = `${w} <span class="del" onclick="removeWord(${i})">×</span>`;
+        list.appendChild(tag);
+      });
+    }
+  }
+
+  function addWord() {
+    const input = document.getElementById('wordInput');
+    const val = input.value.trim();
+    if (!val) return;
+    if (words.includes(val)) { input.value = ''; return; }
+    words.push(val);
+    input.value = '';
+    render();
+  }
+
+  function removeWord(i) {
+    words.splice(i, 1);
+    render();
+  }
+
+  function resetDefault() {
+    words = [...DEFAULT_WORDS];
+    render();
+  }
+
+  function changeCount(delta) {
+    count = Math.max(1, Math.min(words.length || 1, count + delta));
+    document.getElementById('countDisplay').textContent = count;
+  }
+
+  function roll() {
+    if (words.length === 0) return;
+    const n = Math.min(count, words.length);
+    const shuffled = [...words].sort(() => Math.random() - 0.5);
+    const picked = shuffled.slice(0, n);
+
+    const area = document.getElementById('resultWords');
+    area.innerHTML = '';
+    picked.forEach(w => {
+      const el = document.createElement('span');
+      el.className = 'result-word';
+      el.textContent = w;
+      area.appendChild(el);
+    });
+  }
+
+  document.getElementById('wordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addWord();
+  });
+
+  render();
+</script>
+</body>
+</html>
