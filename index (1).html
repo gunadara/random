@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0e0e10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>소재 뽑기</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Noto+Sans+KR:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #1a1a1f;
+    --border: #2e2e38;
+    --text: #e8e8f0;
+    --muted: #666680;
+    --accent: #c8a97e;
+    --accent2: #7e9fc8;
+    --danger: #c87e7e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 60px;
+  }
+
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-bottom: 28px;
+  }
+
+  /* 결과 표시 */
+  .result-area {
+    width: 100%;
+    max-width: 420px;
+    min-height: 110px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(200,169,126,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .result-cat {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .result-word {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.25rem;
+    color: var(--accent);
+    padding: 6px 14px;
+    border: 1px solid rgba(200,169,126,0.3);
+    border-radius: 6px;
+    background: rgba(200,169,126,0.06);
+  }
+
+  .placeholder {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 뽑기 모드 */
+  .mode-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .mode-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .mode-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200,169,126,0.06);
+  }
+
+  /* 카운트 설정 */
+  .count-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .count-row.hidden { display: none; }
+
+  .count-row button {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .count-row button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .count-display {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1rem;
+    color: var(--text);
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* 뽑기 버튼 */
+  .roll-btn {
+    width: 100%;
+    max-width: 420px;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    color: var(--accent);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-bottom: 28px;
+  }
+  .roll-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .roll-btn:active { opacity: 0.8; }
+
+  /* 카테고리 탭 */
+  .cat-tabs {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cat-tabs::-webkit-scrollbar { height: 3px; }
+  .cat-tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .cat-tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .cat-tab.active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .cat-tab.add {
+    color: var(--muted);
+    border-style: dashed;
+  }
+  .cat-tab.add:hover { color: var(--accent2); }
+
+  /* 단어 목록 */
+  .section-title {
+    width: 100%;
+    max-width: 420px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-actions { display: flex; gap: 10px; }
+  .section-actions span { color: var(--accent2); font-size: 0.68rem; cursor: pointer; }
+  .section-actions span:hover { text-decoration: underline; }
+  .section-actions span.danger { color: var(--danger); }
+
+  .word-list {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .word-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.82rem;
+    color: var(--text);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .word-tag .del {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .word-tag .del:hover { color: var(--danger); }
+
+  /* 입력 */
+  .input-row {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .word-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 0;
+  }
+  .word-input:focus { border-color: var(--accent2); }
+  .word-input::placeholder { color: var(--muted); }
+
+  .add-btn {
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--accent2);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .add-btn:hover { border-color: var(--accent2); }
+
+  .empty-hint {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 16px 0;
+  }
+
+  .input-hint {
+    width: 100%;
+    max-width: 420px;
+    font-size: 0.66rem;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<h1>소재 뽑기</h1>
+<p class="sub">단어를 추가하고 랜덤으로 뽑아보세요</p>
+
+<!-- 결과 -->
+<div class="result-area">
+  <div class="result-words" id="resultWords">
+    <span class="placeholder">뽑기 버튼을 누르세요</span>
+  </div>
+</div>
+
+<!-- 뽑기 모드 -->
+<div class="mode-row">
+  <button class="mode-btn" id="modeCat" onclick="setMode('category')">카테고리별 1개씩</button>
+  <button class="mode-btn" id="modeAll" onclick="setMode('all')">전체에서 뽑기</button>
+</div>
+
+<!-- 뽑을 개수 (전체 모드에서만) -->
+<div class="count-row" id="countRow">
+  <button onclick="changeCount(-1)">−</button>
+  <span class="count-display" id="countDisplay">3</span>
+  <button onclick="changeCount(1)">+</button>
+  <span>개 뽑기</span>
+</div>
+
+<!-- 뽑기 버튼 -->
+<button class="roll-btn" onclick="roll()">뽑 기</button>
+
+<!-- 카테고리 탭 -->
+<div class="cat-tabs" id="catTabs"></div>
+
+<!-- 단어 목록 -->
+<div class="section-title">
+  <span>단어 (<span id="wordCount">0</span>개)</span>
+  <span class="section-actions">
+    <span onclick="renameCategory()">이름 변경</span>
+    <span class="danger" onclick="deleteCategory()">카테고리 삭제</span>
+    <span onclick="resetDefault()">전체 초기화</span>
+  </span>
+</div>
+
+<div class="word-list" id="wordList">
+  <div class="empty-hint" id="emptyHint">단어를 추가해보세요</div>
+</div>
+
+<!-- 입력 -->
+<div class="input-row">
+  <input class="word-input" id="wordInput" type="text" placeholder="단어 입력 (쉼표로 여러 개 가능)" maxlength="200">
+  <button class="add-btn" onclick="addWord()">추가</button>
+</div>
+<p class="input-hint">예: 거울, 녹슨 열쇠, 새벽 세시 → 한 번에 3개 추가</p>
+
+<script>
+  const STORAGE_KEY = 'sojae-data-v2';
+
+  const DEFAULT_DATA = {
+    mode: 'category',     // 'category' | 'all'
+    count: 3,
+    activeCat: 0,
+    categories: [
+      { name: '장소', words: ['계단','지하도','잠긴 문','창문','마지막 버스','옥상','폐서점'] },
+      { name: '사물', words: ['거울','달력','꺼진 전화','편지','빈 의자','지도','녹슨 열쇠','사진'] },
+      { name: '분위기', words: ['낯선 냄새','새벽 세시','반복','목소리','그림자','안개','이름'] }
+    ]
+  };
+
+  let state = load();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.categories)) return parsed;
+      }
+    } catch (e) { /* 저장소 접근 불가 환경 → 메모리로만 동작 */ }
+    return structuredClone(DEFAULT_DATA);
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* 저장 불가 시 무시 */ }
+  }
+
+  function activeCat() {
+    if (state.activeCat >= state.categories.length) state.activeCat = 0;
+    return state.categories[state.activeCat];
+  }
+
+  /* ---------- 렌더링 ---------- */
+
+  function render() {
+    renderTabs();
+    renderWords();
+    renderMode();
+  }
+
+  function renderTabs() {
+    const tabs = document.getElementById('catTabs');
+    tabs.innerHTML = '';
+    state.categories.forEach((cat, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-tab' + (i === state.activeCat ? ' active' : '');
+      btn.textContent = `${cat.name} (${cat.words.length})`;
+      btn.onclick = () => { state.activeCat = i; save(); render(); };
+      tabs.appendChild(btn);
+    });
+    const add = document.createElement('button');
+    add.className = 'cat-tab add';
+    add.textContent = '+ 카테고리';
+    add.onclick = addCategory;
+    tabs.appendChild(add);
+  }
+
+  function renderWords() {
+    const list = document.getElementById('wordList');
+    const hint = document.getElementById('emptyHint');
+    const cat = activeCat();
+    document.getElementById('wordCount').textContent = cat ? cat.words.length : 0;
+
+    Array.from(list.querySelectorAll('.word-tag')).forEach(el => el.remove());
+
+    if (!cat || cat.words.length === 0) {
+      hint.style.display = 'block';
+      return;
+    }
+    hint.style.display = 'none';
+    cat.words.forEach((w, i) => {
+      const tag = document.createElement('div');
+      tag.className = 'word-tag';
+      const txt = document.createTextNode(w + ' ');
+      const del = document.createElement('span');
+      del.className = 'del';
+      del.textContent = '×';
+      del.onclick = () => removeWord(i);
+      tag.appendChild(txt);
+      tag.appendChild(del);
+      list.appendChild(tag);
+    });
+  }
+
+  function renderMode() {
+    document.getElementById('modeCat').classList.toggle('active', state.mode === 'category');
+    document.getElementById('modeAll').classList.toggle('active', state.mode === 'all');
+    document.getElementById('countRow').classList.toggle('hidden', state.mode !== 'all');
+    document.getElementById('countDisplay').textContent = state.count;
+  }
+
+  /* ---------- 단어 ---------- */
+
+  function addWord() {
+    const input = document.getElementById('wordInput');
+    const cat = activeCat();
+    if (!cat) return;
+    const parts = input.value.split(',').map(s => s.trim()).filter(Boolean);
+    let added = false;
+    parts.forEach(p => {
+      if (p.length <= 20 && !cat.words.includes(p)) {
+        cat.words.push(p);
+        added = true;
+      }
+    });
+    input.value = '';
+    if (added) { save(); render(); }
+  }
+
+  function removeWord(i) {
+    activeCat().words.splice(i, 1);
+    save(); render();
+  }
+
+  /* ---------- 카테고리 ---------- */
+
+  function addCategory() {
+    const name = prompt('새 카테고리 이름');
+    if (!name || !name.trim()) return;
+    state.categories.push({ name: name.trim().slice(0, 12), words: [] });
+    state.activeCat = state.categories.length - 1;
+    save(); render();
+  }
+
+  function renameCategory() {
+    const cat = activeCat();
+    if (!cat) return;
+    const name = prompt('카테고리 이름 변경', cat.name);
+    if (!name || !name.trim()) return;
+    cat.name = name.trim().slice(0, 12);
+    save(); render();
+  }
+
+  function deleteCategory() {
+    if (state.categories.length <= 1) {
+      alert('카테고리는 최소 1개 필요해요');
+      return;
+    }
+    const cat = activeCat();
+    if (!confirm(`「${cat.name}」 카테고리와 단어 ${cat.words.length}개를 삭제할까요?`)) return;
+    state.categories.splice(state.activeCat, 1);
+    state.activeCat = 0;
+    save(); render();
+  }
+
+  function resetDefault() {
+    if (!confirm('모든 카테고리와 단어를 기본값으로 되돌릴까요?')) return;
+    state = structuredClone(DEFAULT_DATA);
+    save(); render();
+  }
+
+  /* ---------- 뽑기 ---------- */
+
+  function setMode(m) {
+    state.mode = m;
+    save(); renderMode();
+  }
+
+  function changeCount(delta) {
+    const total = state.categories.reduce((n, c) => n + c.words.length, 0);
+    state.count = Math.max(1, Math.min(total || 1, state.count + delta));
+    save(); renderMode();
+  }
+
+  // Fisher–Yates 셔플 (sort(random)보다 균등함)
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function roll() {
+    const area = document.getElementById('resultWords');
+    let results = [];
+
+    if (state.mode === 'category') {
+      results = state.categories
+        .filter(c => c.words.length > 0)
+        .map(c => ({
+          cat: c.name,
+          word: c.words[Math.floor(Math.random() * c.words.length)]
+        }));
+    } else {
+      const all = state.categories.flatMap(c => c.words);
+      results = shuffle(all).slice(0, Math.min(state.count, all.length))
+        .map(w => ({ cat: null, word: w }));
+    }
+
+    area.innerHTML = '';
+    if (results.length === 0) {
+      const ph = document.createElement('span');
+      ph.className = 'placeholder';
+      ph.textContent = '단어가 없어요';
+      area.appendChild(ph);
+      return;
+    }
+
+    results.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'result-item';
+      if (r.cat) {
+        const lbl = document.createElement('span');
+        lbl.className = 'result-cat';
+        lbl.textContent = r.cat;
+        item.appendChild(lbl);
+      }
+      const el = document.createElement('span');
+      el.className = 'result-word';
+      el.textContent = r.word;
+      item.appendChild(el);
+      area.appendChild(item);
+    });
+  }
+
+  document.getElementById('wordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addWord();
+  });
+
+  /* ---------- PWA ---------- */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  render();
+</script>
+</body>
+</html>
