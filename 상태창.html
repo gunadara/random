@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>상태창</title>
+<meta name="theme-color" content="#15151a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="상태창">
+<link rel="manifest" href="manifest-status.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; padding: 16px 16px 0; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; background: #15151a; color: #ecebe6; }
@@ -109,7 +115,20 @@
   .kao-list button .x { position: absolute; top: 2px; right: 6px; font-size: 12px; opacity: .5; }
   .kao-list button.aa { grid-column: 1 / -1; white-space: pre; text-align: left; font-size: 14px; line-height: 1.3; overflow-x: auto; text-overflow: clip; padding: 12px 14px; }
   .kao-msg { text-align: center; font-size: 14px; color: #97C459; min-height: 22px; margin: 8px 0; }
-  body[data-view="reply"] #viewReply { display: block; }
+  body[data-view="reply"] #viewReply, body[data-view="glitch"] #viewGlitch { display: block; }
+  .ch-row { display: flex; gap: 6px; align-items: center; padding: 6px 0; border-bottom: 1px solid #2e2e34; }
+  .ch-row .nm { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ch-row button { font-size: 13px; padding: 6px 9px; }
+  .ch-row button.x { opacity: .7; }
+  .ch-line { display: flex; gap: 6px; margin-top: 8px; }
+  .ch-line select, .ch-line input { flex: 1; min-width: 0; }
+  .ch-line input { font-size: 16px; padding: 8px 10px; border: 1px solid #5f5e5a; border-radius: 8px; background: #222228; color: #ecebe6; font-family: inherit; }
+  #chDiff { white-space: pre-wrap; font-size: 14px; line-height: 1.7; background: #15151a; border: 1px solid #3a3a40; border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+  #chDiff[hidden], #chNewBox[hidden] { display: none; }
+  .phr-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .phr-list button.phr { text-align: left; font-size: 14px; padding: 9px 12px; }
+  .phr-list .x { opacity: .55; }
+  #glOut { font-size: 20px; line-height: 2.3; padding: 22px 18px; overflow-wrap: anywhere; }
   .outbox { white-space: pre-wrap; background: #fbfaf7; color: #1f1f1d; border-radius: 10px; padding: 16px 18px; font-size: 16px; line-height: 1.8; min-height: 60px; }
   .rp-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; align-items: center; font-size: 14px; }
   .rp-grid input[type=text] { width: 100%; font-size: 16px; padding: 8px 10px; border: 1px solid #5f5e5a; border-radius: 8px; background: #222228; color: #ecebe6; font-family: inherit; }
@@ -141,6 +160,7 @@
     <button data-view="pick">소재 뽑기</button>
     <button data-view="circle">마법진</button>
     <button data-view="kao">카오모지</button>
+    <button data-view="glitch">깨진 글자</button>
   </div>
 </header>
 <div class="app">
@@ -151,6 +171,7 @@
     <button class="card" data-go="reply"><span class="ic">▶ ▷</span><b>대화·퀘스트</b><small>퀘스트 도착, 선택지, 주인공 대답을 이어 써요</small></button>
     <button class="card" data-go="pick"><span class="ic">✦</span><b>소재 뽑기</b><small>단어를 무작위로 뽑아 상태창에 넣어요</small></button>
     <button class="card" data-go="circle"><span class="ic">⛤</span><b>마법진</b><small>도형을 겹쳐 마법진 그림을 만들어요</small></button>
+    <button class="card" data-go="glitch"><span class="ic">신̷̛̖의̴</span><b>깨진 글자</b><small>신의 말씀, 오류 메시지처럼 망가진 글자</small></button>
     <button class="card" data-go="kao"><span class="ic">(˶ᵔ ᵕ ᵔ˶)</span><b>카오모지</b><small>누르면 입력칸에 들어가는 얼굴 문자</small></button>
   </div>
 </section>
@@ -166,6 +187,24 @@
     <button id="clear">지우기</button>
   </div>
   <textarea id="src" spellcheck="false" placeholder="첫 줄은 제목&#10;이름: 이현성&#10;HP: 80/100"></textarea>
+
+  <details id="chBox">
+    <summary><span>캐릭터별 저장 <b id="chName"></b></span></summary>
+    <div class="inner">
+      <div class="ch-line"><select id="chSel"></select><button id="chNew">+ 새 캐릭터</button></div>
+      <div class="ch-line" id="chNewBox" hidden><input id="chNewName" placeholder="캐릭터 이름 (예: 이현성)" maxlength="20"><button id="chNewDo">만들기</button></div>
+      <div class="ch-line"><input id="chMemo" placeholder="메모 (예: 12화, 각성 직후)" maxlength="30"><button id="chSaveNow">지금 내용 저장</button></div>
+      <div class="kao-msg" id="chMsg"></div>
+      <div id="chList"></div>
+      <div id="chDiff" hidden></div>
+      <div class="sj-links" style="margin-top:12px">
+        <span id="chExport">백업 파일로 저장</span>
+        <span id="chImport">백업 불러오기</span>
+        <span class="danger" id="chDelChar">캐릭터 삭제</span>
+      </div>
+      <input type="file" id="chFile" accept=".json,application/json" hidden>
+    </div>
+  </details>
 
 
   <details id="styleBox">
@@ -223,11 +262,20 @@
     <button data-rp="say">+ 대답</button>
     <button data-rp="think">+ 속마음</button>
     <button data-rp="sys">+ 시스템</button>
+    <button data-rp="god">+ 신의 말씀</button>
     <span class="sp"></span>
     <button id="rpSample">예시</button>
     <button id="rpClear">지우기</button>
   </div>
   <textarea id="rpSrc" spellcheck="false" placeholder="퀘스트: 첫 번째 시련&#10;선택: *수락 / 거절&#10;&gt; 거절하면?"></textarea>
+  <details>
+    <summary><span>자주 쓰는 시스템 문구</span></summary>
+    <div class="inner">
+      <div class="kao-tabs" id="phrTabs"></div>
+      <div class="phr-list" id="phrList"></div>
+      <div class="savebox" style="margin-top:10px"><input id="phrInput" placeholder="내 문구 추가 ({이름}은 넣을 때 선택돼요)" maxlength="80"><button id="phrAdd">추가</button></div>
+    </div>
+  </details>
   <details>
     <summary><span>모양 고르기</span></summary>
     <div class="inner rp-grid">
@@ -235,6 +283,11 @@
       <span>선택지</span><select id="rpChoice"><option value="arrow">▶ 수락  ▷ 거절</option><option value="box">[▶수락]  [거절]</option><option value="check">☑ 수락  ☐ 거절</option><option value="num">1. 수락 ◀ (줄마다)</option></select>
       <span>퀘스트 묶음</span><select id="rpQuest"><option value="each">줄마다 괄호</option><option value="block">제목만 괄호 + 아래 목록</option></select>
       <span>도착 문구</span><input type="text" id="rpArrive" placeholder="비우면 안 넣어요">
+      <div class="mc-sec">신의 말씀 (@@ 줄)</div>
+      <span>깨짐 모양</span><select id="rpGlStyle"></select>
+      <span>깨짐 정도</span><input type="range" id="rpGlLevel" min="1" max="5" step="1">
+      <span>괄호</span><select id="rpGlWrap"></select>
+      <span></span><button id="rpGlReroll">다시 깨뜨리기</button>
     </div>
   </details>
   <details>
@@ -245,6 +298,7 @@
       <b>&gt; 대사</b> → 주인공 대답 "대사"<br>
       <b>&gt;&gt; 생각</b> → 속마음 '생각'<br>
       <b>시스템: 메시지</b> → 시스템 응답<br>
+      <b>@@ 말씀</b> → 신의 말씀 (깨진 글자로 바뀌어요, 모양은 '모양 고르기'에서)<br>
       그 외 줄 → 서술 그대로 · 빈 줄은 그대로 빈 줄
     </div>
   </details>
@@ -254,6 +308,24 @@
     <button id="rpCopy">복사</button>
     <span id="rpMsgOut" style="font-size:14px;color:#97C459;min-width:60px"></span>
   </div>
+</section>
+<section class="wrap view" id="viewGlitch">
+  <div class="lbl">원래 문장</div>
+  <textarea id="glSrc" spellcheck="false" style="min-height:90px" placeholder="깨뜨릴 문장"></textarea>
+  <div class="rp-grid" style="margin-top:12px">
+    <span>깨짐 모양</span><select id="glStyle"></select>
+    <span>깨짐 정도</span><input type="range" id="glLevel" min="1" max="5" step="1">
+    <span>괄호</span><select id="glWrap"></select>
+  </div>
+  <div class="lbl">결과</div>
+  <div class="outbox" id="glOut"></div>
+  <div class="mc-btns">
+    <button class="main" id="glCopy">복사</button>
+    <button id="glReroll">다시 깨뜨리기</button>
+    <button id="glInsert">입력칸에 넣기</button>
+  </div>
+  <div class="kao-msg" id="glMsg"></div>
+  <div class="help" style="margin-top:8px">'위아래로 번지는 글자'는 사이트에 따라 잘리거나 지워질 수 있어요. 연재 사이트에 붙일 땐 블록·자모·인코딩 깨짐이 안전해요. 같은 문장은 '다시 깨뜨리기'를 누르기 전까지 같은 모양으로 깨져요.</div>
 </section>
 <section class="wrap view" id="viewPick">
   <div class="lbl pick-h">소재 뽑기</div>
@@ -292,6 +364,7 @@
     <button id="mcSvg">SVG 저장</button>
   </div>
   <div class="mc-grid">
+    <span>빽빽함</span><input type="range" id="mcDense" min="1" max="5" step="1">
     <div class="mc-sec">바깥 원</div>
     <span>원 겹 수</span><input type="range" id="mcRings" min="1" max="4" step="1">
     <span>눈금</span><label class="opt"><input type="checkbox" id="mcTicks"> 둘레에 눈금 넣기</label>
@@ -302,8 +375,12 @@
     <span>도형 2</span><select id="mcShape2"></select>
     <span>꼭짓점 원</span><label class="opt"><input type="checkbox" id="mcDots"> 꼭짓점에 작은 원</label>
     <span>안쪽 원</span><label class="opt"><input type="checkbox" id="mcInner"> 도형 안에 원 하나 더</label>
+    <span>안쪽 글자</span><select id="mcScript2"></select>
     <span>회전</span><input type="range" id="mcRot" min="0" max="360" step="1">
-    <span>가운데</span><input type="text" id="mcCenter" maxlength="4" placeholder="가운데 기호 (예: ☉ 火 ✦)">
+    <div class="mc-sec">가운데</div>
+    <span>모양</span><select id="mcCenterType"></select>
+    <span>글자</span><input type="text" id="mcCenter" maxlength="4" placeholder="아래에서 고르거나 직접 쓰기">
+    <div id="mcPalette" style="grid-column:1/-1"></div>
     <div class="mc-sec">색과 효과</div>
     <span>선 색</span><input type="color" id="mcColor">
     <span>선 굵기</span><input type="range" id="mcWidth" min="1" max="5" step="0.5">
@@ -1620,7 +1697,7 @@ sjRender();
 /* ---------- 화면 전환 ---------- */
 function sjFlash(t) { const m = $('sjMsg'); m.textContent = t; clearTimeout(sjFlash.t); sjFlash.t = setTimeout(() => m.textContent = '', 1800); }
 const isNarrow = () => !window.matchMedia('(min-width: 900px)').matches;
-const VIEW_NAMES = { home: '작가의 상태창', status: '상태창', reply: '대화·퀘스트', pick: '소재 뽑기', circle: '마법진', kao: '카오모지' };
+const VIEW_NAMES = { home: '작가의 상태창', status: '상태창', reply: '대화·퀘스트', pick: '소재 뽑기', circle: '마법진', kao: '카오모지', glitch: '깨진 글자' };
 function setView(v) {
   if (!VIEW_NAMES[v]) v = 'home';
   document.body.dataset.view = v;
@@ -1656,8 +1733,17 @@ const MC_SHAPES = {
   '8/2': '팔망성 (사각 두 개)', '8/3': '팔망성 (뾰족)', '9/2': '구망성 (넓게)', '9/4': '구망성 (뾰족)', '12/5': '십이망성'
 };
 const MC_COLORS = ['#c8a97e', '#85B7EB', '#F09595', '#AFA9EC', '#97C459', '#FAC775', '#5DCAA5', '#ffffff', '#ED93B1'];
-const MC_CENTERS = ['☉', '☽', '✦', '✧', '火', '水', '風', '光', '闇', '◈', '❂', ''];
-const MC_DEFAULT = { rings: 3, ticks: true, script: 'rune', text: MC_SCRIPTS.rune[1], shape1: '6/2', shape2: '3/1', dots: true, inner: true, rot: 0, center: '☉', color: '#c8a97e', width: 2, glow: true, bg: 'dark', spin: false, secs: 8, size: 480, pulse: true };
+const MC_SYMBOLS = {
+  '원소': '火水風土光闇雷氷木金',
+  '행성': '☉☽☿♀♂♃♄♅♆',
+  '별자리': '♈♉♊♋♌♍♎♏♐♑♒♓',
+  '룬': 'ᚠᚢᚦᚨᚱᚲᚷᛉᛟᛞᛏᛒ',
+  '그리스': 'ΑΩΣΨΦΔΛΘΞΠ',
+  '기호': '✦✧❂☯✡⚝☸⚛∞⚜☥✠☩✙⊕⊗◈❖✵✺☼✶❈⌘'
+};
+const MC_EMBLEMS = { text: '글자 기호', eye: '눈', sun: '태양', moon: '초승달', fire: '불 (△)', water: '물 (▽)', air: '공기 (△ + 선)', earth: '흙 (▽ + 선)', spiral: '소용돌이', none: '없음' };
+const MC_CENTERS = Object.values(MC_SYMBOLS).flatMap(s => [...s]);
+const MC_DEFAULT = { dense: 4, script2: 'star', centerType: 'text', rings: 3, ticks: true, script: 'rune', text: MC_SCRIPTS.rune[1], shape1: '6/2', shape2: '3/1', dots: true, inner: true, rot: 0, center: '☉', color: '#c8a97e', width: 2, glow: true, bg: 'dark', spin: false, secs: 8, size: 480, pulse: true };
 let mc = Object.assign({}, MC_DEFAULT);
 try { const r = JSON.parse(load('sw-mc', 'null')); if (r) mc = Object.assign(mc, r); } catch (e) {}
 
@@ -1682,70 +1768,135 @@ function mcStarPaths(spec, r, rotDeg) {
 }
 const mcEsc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+const MC_FONT = "'Segoe UI Historic','Segoe UI Symbol','Noto Sans Runic','Noto Sans Symbols','Noto Serif KR',serif";
+const mcVS = s => [...s].map(ch => /[☀-⛿]/.test(ch) ? ch + '︎' : ch).join('');
+function mcTextRing(id, r, str, fs, c) {
+  const chars = [...(str || '')];
+  if (!chars.length) return '';
+  const circ = 2 * Math.PI * r, fit = Math.max(4, Math.floor(circ / (fs * 1.15)));
+  let arr = []; while (arr.length < fit) arr = arr.concat(chars);
+  arr = arr.slice(0, fit);
+  return `<defs><path id="${id}" d="M 250,250 m -${r.toFixed(1)},0 a ${r.toFixed(1)},${r.toFixed(1)} 0 1,1 ${(2 * r).toFixed(1)},0 a ${r.toFixed(1)},${r.toFixed(1)} 0 1,1 -${(2 * r).toFixed(1)},0"/></defs><text font-size="${fs}" fill="${c}" stroke="none" font-family="${MC_FONT}" dominant-baseline="middle"><textPath href="#${id}" textLength="${(circ - fs).toFixed(1)}" lengthAdjust="spacing">${mcEsc(mcVS(arr.join('')))}</textPath></text>`;
+}
+function mcEmblem(type, s, c, w) {
+  const f = n => n.toFixed(1), X = x => f(250 + x), Y = y => f(250 + y);
+  const tri = (up) => { const k = up ? 1 : -1; return `<path d="M${X(0)},${Y(-s * k)} L${X(s * 0.87)},${Y(s * 0.5 * k)} L${X(-s * 0.87)},${Y(s * 0.5 * k)} Z" stroke-width="${w}" stroke-linejoin="round"/>`; };
+  if (type === 'eye') {
+    const a = s, b = s * 0.55;
+    return `<path d="M${X(-a)},250 Q250,${Y(-b * 1.6)} ${X(a)},250 Q250,${Y(b * 1.6)} ${X(-a)},250 Z" stroke-width="${w}"/><circle cx="250" cy="250" r="${f(b * 0.62)}" stroke-width="${w * 0.8}"/><circle cx="250" cy="250" r="${f(b * 0.28)}" fill="${c}" stroke="none"/>`;
+  }
+  if (type === 'sun') {
+    let d = ''; for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; d += `M${X(Math.cos(a) * s * 0.6)},${Y(Math.sin(a) * s * 0.6)} L${X(Math.cos(a) * s * (i % 2 ? 0.85 : 1))},${Y(Math.sin(a) * s * (i % 2 ? 0.85 : 1))} `; }
+    return `<circle cx="250" cy="250" r="${f(s * 0.42)}" stroke-width="${w}"/><circle cx="250" cy="250" r="${f(s * 0.12)}" fill="${c}" stroke="none"/><path d="${d}" stroke-width="${w * 0.8}"/>`;
+  }
+  if (type === 'moon') {
+    const R = s * 0.85, d = R * 0.5, x = d / 2, y = Math.sqrt(R * R - x * x);
+    return `<path d="M${X(x)},${Y(-y)} A${f(R)},${f(R)} 0 1 0 ${X(x)},${Y(y)} A${f(R)},${f(R)} 0 0 1 ${X(x)},${Y(-y)} Z" fill="${c}" stroke="none"/>`;
+  }
+  if (type === 'fire') return tri(true);
+  if (type === 'water') return tri(false);
+  if (type === 'air') return tri(true) + `<path d="M${X(-s * 0.75)},${Y(s * 0.05)} L${X(s * 0.75)},${Y(s * 0.05)}" stroke-width="${w}"/>`;
+  if (type === 'earth') return tri(false) + `<path d="M${X(-s * 0.75)},${Y(-s * 0.05)} L${X(s * 0.75)},${Y(-s * 0.05)}" stroke-width="${w}"/>`;
+  if (type === 'spiral') {
+    let d = ''; for (let i = 0; i <= 120; i++) { const t = i / 120 * 4 * Math.PI, r = s * 0.95 * t / (4 * Math.PI); d += `${i ? 'L' : 'M'}${X(r * Math.cos(t))},${Y(r * Math.sin(t))} `; }
+    return `<path d="${d}" stroke-width="${w}" stroke-linecap="round"/>`;
+  }
+  return '';
+}
+
 function mcSVG(forExport, aDeg = 0, bDeg = 0, op = 1) {
-  const c = mc.color, w = mc.width, fill = mcBgFill();
+  const c = mc.color, w = mc.width, fill = mcBgFill(), D = Number(mc.dense) || 3;
+  const f1 = n => n.toFixed(1);
+  const P = (r, deg) => { const a = deg * Math.PI / 180; return [250 + r * Math.cos(a), 250 + r * Math.sin(a)]; };
+  const circle = (r, sw, extra = '') => `<circle cx="250" cy="250" r="${f1(r)}" stroke-width="${f1(sw)}" ${extra}/>`;
+  const label = (x, y, t, fs) => `<text x="${f1(x)}" y="${f1(y + 1)}" font-size="${f1(fs)}" fill="${c}" stroke="none" text-anchor="middle" dominant-baseline="middle" font-family="${MC_FONT}">${mcEsc(mcVS(t))}</text>`;
+
   const ringSets = { 1: [236], 2: [236, 206], 3: [236, 206, 198], 4: [236, 230, 206, 198] };
   const rings = ringSets[mc.rings] || ringSets[3];
   const text = (mc.text || '').trim();
   let edge = rings[rings.length - 1];
   if (mc.rings === 1 && text) edge = 206;
-  let outer = '', band = '', shapes = '';
-  rings.forEach((r, i) => { outer += `<circle cx="250" cy="250" r="${r}" stroke-width="${i === 0 ? w * 1.3 : w * 0.8}"/>`; });
-  if (mc.rings === 1 && text) outer += `<circle cx="250" cy="250" r="206" stroke-width="${w * 0.5}" stroke-dasharray="2 6"/>`;
+  let outer = '', shapes = '';
 
-  if (text) {
-    const rt = 221 - 5, fs = 17;
-    const circ = 2 * Math.PI * rt;
-    const fit = Math.max(4, Math.floor(circ / (fs * 1.15)));
-    const chars = [...text];
-    let s = ''; while ([...s].length < fit) s += chars.join('');
-    s = [...s].slice(0, fit).join('');
-    band = `<defs><path id="mcTP" d="M 250,250 m -${rt},0 a ${rt},${rt} 0 1,1 ${2 * rt},0 a ${rt},${rt} 0 1,1 -${2 * rt},0"/></defs>
-<text font-size="${fs}" fill="${c}" stroke="none" font-family="'Segoe UI Historic','Noto Sans Runic','Noto Serif KR',serif" dominant-baseline="middle"><textPath href="#mcTP" textLength="${(circ - fs).toFixed(1)}" lengthAdjust="spacing">${mcEsc(s)}</textPath></text>`;
-  }
+  rings.forEach((r, i) => { outer += circle(r, i === 0 ? w * 1.3 : w * 0.8); });
+  if (mc.rings === 1 && text) outer += circle(206, w * 0.5, 'stroke-dasharray="2 6"');
+  if (text) outer += mcTextRing('mcTP', 221, text, 17, c);
+  if (D >= 2) { for (let i = 0; i < 72; i++) { const [x, y] = P(243, i * 5); outer += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${i % 6 === 0 ? 2.4 : 1.3}" fill="${c}" stroke="none"/>`; } }
+  if (D >= 5) outer += circle(248, w * 0.5);
+  if (D >= 4 && mc.rings >= 3) { for (let i = 0; i < 36; i++) { const [x, y] = P(202, i * 10 + 5); outer += `<circle cx="${f1(x)}" cy="${f1(y)}" r="1.4" fill="${c}" stroke="none"/>`; } }
 
   let Rs = edge;
   if (mc.ticks) {
     const inR = edge - 12;
     let t = '';
     for (let i = 0; i < 72; i++) {
-      const a = i * 5 * Math.PI / 180, long = i % 6 === 0;
-      const r1 = edge, r2 = long ? inR - 2 : edge - 7;
-      t += `M${(250 + r1 * Math.cos(a)).toFixed(1)},${(250 + r1 * Math.sin(a)).toFixed(1)} L${(250 + r2 * Math.cos(a)).toFixed(1)},${(250 + r2 * Math.sin(a)).toFixed(1)} `;
+      const long = i % 6 === 0;
+      const [x1, y1] = P(edge, i * 5), [x2, y2] = P(long ? inR - 2 : edge - 7, i * 5);
+      t += `M${f1(x1)},${f1(y1)} L${f1(x2)},${f1(y2)} `;
     }
-    shapes += `<path d="${t}" stroke-width="${w * 0.6}"/><circle cx="250" cy="250" r="${inR}" stroke-width="${w * 0.8}"/>`;
+    shapes += `<path d="${t}" stroke-width="${f1(w * 0.6)}"/>` + circle(inR, w * 0.8);
     Rs = inR;
   }
 
+  const has1 = mc.shape1 !== 'none';
+  const [n1, k1] = has1 ? mc.shape1.split('/').map(Number) : [6, 1];
   const s1 = mcStarPaths(mc.shape1, Rs, mc.rot);
-  let inner = mc.shape1 === 'none' ? Rs * 0.6 : s1.innerR;
+  if (has1 && D >= 5 && k1 > 1) shapes += `<path d="${mcStarPaths(n1 + '/1', Rs, mc.rot).d}" stroke-width="${f1(w * 0.5)}" stroke-linejoin="round"/>`;
   if (s1.d) shapes += `<path d="${s1.d}" stroke-width="${w}" stroke-linejoin="round"/>`;
-  if (mc.inner) shapes += `<circle cx="250" cy="250" r="${inner.toFixed(1)}" stroke-width="${w * 0.8}"/>`;
-  let Rs2 = mc.inner ? inner : inner * 0.95;
+  const inner = has1 ? s1.innerR : Rs * 0.6;
+  if (mc.inner) shapes += circle(inner, w * 0.8);
+
+  if (has1 && D >= 3) {
+    const rc = Rs * Math.cos(Math.PI * k1 / n1) / Math.cos(Math.PI * (k1 - 1) / n1);
+    const gap = Rs - rc, fs = Math.min(18, gap * 0.42);
+    const pool = [...mcVSless(MC_SCRIPTS[mc.script2] ? MC_SCRIPTS[mc.script2][1] : '☉☽☿♀♂♃♄♅♆')].filter(ch => ch.trim() && ch !== '·');
+    if (fs >= 8 && pool.length) for (let i = 0; i < n1; i++) { const [x, y] = P((Rs + rc) / 2 + (k1 === 1 ? 0 : gap * 0.08), mc.rot - 90 + 360 * (i + 0.5) / n1); shapes += label(x, y, pool[i % pool.length], fs); }
+  }
+
+  let Z = mc.inner ? inner : inner * 0.95;
+  if (D >= 3 && mc.script2 !== 'none' && MC_SCRIPTS[mc.script2] && Z > 70) {
+    shapes += mcTextRing('mcTP2', Z - 11, MC_SCRIPTS[mc.script2][1], 11, c) + circle(Z - 22, w * 0.6);
+    Z -= 22;
+  }
+  let rz = Z * 0.85;
   if (mc.shape2 !== 'none') {
     const n2 = Number(mc.shape2.split('/')[0]);
-    const s2 = mcStarPaths(mc.shape2, Rs2, mc.rot + 180 / n2);
-    shapes += `<path d="${s2.d}" stroke-width="${w * 0.8}" stroke-linejoin="round"/>`;
-    Rs2 = s2.innerR;
+    const s2 = mcStarPaths(mc.shape2, Z, mc.rot + 180 / n2);
+    shapes += `<path d="${s2.d}" stroke-width="${f1(w * 0.8)}" stroke-linejoin="round"/>`;
+    rz = s2.innerR;
   }
+  if (D >= 4 && rz > 36) {
+    const m = has1 && n1 >= 5 ? n1 : 6, rr = rz / 2;
+    for (let i = 0; i < m; i++) { const [x, y] = P(rr, mc.rot - 90 + 360 * i / m); shapes += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(rr)}" stroke-width="${f1(w * 0.45)}"/>`; }
+    shapes += circle(rz, w * 0.6, 'stroke-dasharray="1 4"');
+  }
+
   if (mc.dots && s1.pts.length) {
-    s1.pts.forEach(([x, y]) => { shapes += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" fill="${fill}" stroke-width="${w * 0.8}"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${c}" stroke="none"/>`; });
+    const zod = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+    s1.pts.forEach(([x, y], i) => {
+      if (D >= 2) shapes += `<circle cx="${f1(x)}" cy="${f1(y)}" r="13" fill="${fill}" stroke-width="${f1(w * 0.8)}"/>` + label(x, y, zod[i % 12], 12);
+      else shapes += `<circle cx="${f1(x)}" cy="${f1(y)}" r="8" fill="${fill}" stroke-width="${f1(w * 0.8)}"/><circle cx="${f1(x)}" cy="${f1(y)}" r="2.5" fill="${c}" stroke="none"/>`;
+    });
   }
-  const center = (mc.center || '').trim();
-  if (center) {
-    const cr = Math.max(22, Math.min(46, Rs2 * 0.55));
-    shapes += `<circle cx="250" cy="250" r="${cr.toFixed(1)}" fill="${fill}" stroke-width="${w * 0.8}"/>`;
-    shapes += `<text x="250" y="252" font-size="${(cr * 1.1).toFixed(0)}" fill="${c}" stroke="none" text-anchor="middle" dominant-baseline="middle" font-family="'Noto Serif KR','Segoe UI Symbol',serif">${mcEsc(center)}</text>`;
+
+  const ctype = mc.centerType || 'text', center = (mc.center || '').trim();
+  if (ctype !== 'none' && (ctype !== 'text' || center)) {
+    const cr = Math.max(18, Math.min(44, rz * 0.5));
+    shapes += circle(cr, w * 0.8, `fill="${fill}"`);
+    if (D >= 3) shapes += circle(cr + 5, w * 0.5);
+    if (ctype === 'text') shapes += label(250, 250, center, cr * 1.05);
+    else shapes += mcEmblem(ctype, cr * 0.68, c, w * 0.9);
   }
 
   const glow = mc.glow ? `<filter id="mcGlow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>` : '';
   const bgRect = forExport && fill !== 'none' ? `<rect width="500" height="500" fill="${fill}"/>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500"><defs>${glow}</defs>${bgRect}
 <g fill="none" stroke="${c}" opacity="${op.toFixed(3)}" ${mc.glow ? 'filter="url(#mcGlow)"' : ''}>
-<g id="mcSpinA"${aDeg ? ` transform="rotate(${aDeg.toFixed(3)} 250 250)"` : ''}>${outer}${band}</g>
+<g id="mcSpinA"${aDeg ? ` transform="rotate(${aDeg.toFixed(3)} 250 250)"` : ''}>${outer}</g>
 <g id="mcSpinB"${bDeg ? ` transform="rotate(${bDeg.toFixed(3)} 250 250)"` : ''}>${shapes}</g>
 </g></svg>`;
 }
+const mcVSless = s => s;
 
 function mcDraw() {
   const st = $('mcStage');
@@ -1759,7 +1910,20 @@ function mcFlash(t) { const m = $('mcMsg'); m.textContent = t; clearTimeout(mcFl
 (function mcInit() {
   const fillSel = (el, obj) => Object.entries(obj).forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = Array.isArray(l) ? l[0] : l; el.appendChild(o); });
   fillSel($('mcScript'), MC_SCRIPTS); fillSel($('mcShape1'), MC_SHAPES); fillSel($('mcShape2'), MC_SHAPES);
-  const bind = [['mcRings', 'rings', 'num'], ['mcTicks', 'ticks', 'chk'], ['mcShape1', 'shape1'], ['mcShape2', 'shape2'], ['mcDots', 'dots', 'chk'], ['mcInner', 'inner', 'chk'],
+  { const o = document.createElement('option'); o.value = 'none'; o.textContent = '없음'; $('mcScript2').appendChild(o); }
+  Object.entries(MC_SCRIPTS).filter(([k]) => k !== 'custom').forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l[0]; $('mcScript2').appendChild(o); });
+  fillSel($('mcCenterType'), MC_EMBLEMS);
+  Object.entries(MC_SYMBOLS).forEach(([cat, chars]) => {
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:6px 0';
+    const lb = document.createElement('span'); lb.textContent = cat; lb.style.cssText = 'font-size:12px;opacity:.6;width:44px'; row.appendChild(lb);
+    [...chars].forEach(ch => {
+      const b = document.createElement('button'); b.textContent = mcVS(ch); b.style.cssText = 'font-size:17px;padding:4px 0;width:34px;font-family:' + MC_FONT.replace(/'/g, '"');
+      b.addEventListener('click', () => { mc.center = ch; mc.centerType = 'text'; mcSync(); mcDraw(); });
+      row.appendChild(b);
+    });
+    $('mcPalette').appendChild(row);
+  });
+  const bind = [['mcDense', 'dense', 'num'], ['mcScript2', 'script2'], ['mcCenterType', 'centerType'], ['mcRings', 'rings', 'num'], ['mcTicks', 'ticks', 'chk'], ['mcShape1', 'shape1'], ['mcShape2', 'shape2'], ['mcDots', 'dots', 'chk'], ['mcInner', 'inner', 'chk'],
     ['mcRot', 'rot', 'num'], ['mcCenter', 'center'], ['mcColor', 'color'], ['mcWidth', 'width', 'num'], ['mcGlow', 'glow', 'chk'], ['mcBg', 'bg'], ['mcSpin', 'spin', 'chk'], ['mcSecs', 'secs', 'num'], ['mcSize', 'size', 'num'], ['mcPulse', 'pulse', 'chk']];
   window.mcSync = () => {
     bind.forEach(([id, key, t]) => { const el = $(id); if (t === 'chk') el.checked = !!mc[key]; else el.value = mc[key]; });
@@ -1772,6 +1936,7 @@ function mcFlash(t) { const m = $('mcMsg'); m.textContent = t; clearTimeout(mcFl
       mcDraw();
     });
   });
+  $('mcCenter').addEventListener('input', () => { if (mc.center.trim()) { mc.centerType = 'text'; $('mcCenterType').value = 'text'; mcDraw(); } });
   $('mcScript').addEventListener('change', () => { mc.script = $('mcScript').value; if (mc.script !== 'custom') mc.text = MC_SCRIPTS[mc.script][1]; $('mcText').value = mc.text; mcDraw(); });
   $('mcText').addEventListener('input', () => { mc.text = $('mcText').value; mc.script = 'custom'; $('mcScript').value = 'custom'; mcDraw(); });
 
@@ -1781,7 +1946,10 @@ function mcFlash(t) { const m = $('mcMsg'); m.textContent = t; clearTimeout(mcFl
     const shapes = Object.keys(MC_SHAPES).filter(k => k !== 'none');
     const scripts = Object.keys(MC_SCRIPTS).filter(k => k !== 'custom');
     const script = rp(scripts);
+    const script2 = Math.random() < .85 ? rp(scripts.filter(k => k !== script && k !== 'latin')) : 'none';
+    const emb = Object.keys(MC_EMBLEMS).filter(k => k !== 'text' && k !== 'none');
     Object.assign(mc, {
+      dense: 3 + ri(3), script2, centerType: Math.random() < .55 ? 'text' : rp(emb),
       rings: 1 + ri(4), ticks: Math.random() < .6, script, text: MC_SCRIPTS[script][1],
       shape1: rp(shapes), shape2: Math.random() < .55 ? rp(['3/1', '4/1', '5/2', '6/2', '6/1', '8/2']) : 'none',
       dots: Math.random() < .6, inner: Math.random() < .7, rot: ri(24) * 15, center: rp(MC_CENTERS),
@@ -2014,6 +2182,7 @@ function rpConvert(text, o) {
     const line = raw.trim();
     let m;
     if (!line) { inQuest = false; out.push(''); continue; }
+    if ((m = line.match(/^@@\s*(.+?)\s*(?:@@)?$/))) { inQuest = false; out.push(glMake(m[1])); continue; }
     if ((m = line.match(/^퀘스트\s*[:：]\s*(.+)$/))) {
       inQuest = true;
       if (o.arrive && o.arrive.trim()) out.push(W(o.arrive.trim()));
@@ -2049,7 +2218,7 @@ rpSrc.value = load('sw-rp-src', RP_SAMPLE);
 });
 rpSrc.addEventListener('input', rpUpdate);
 rpSrc.addEventListener('focus', () => { lastTA = rpSrc; });
-const RP_SNIPS = { quest: ['퀘스트: 제목\n내용: \n보상: \n실패: ', 5, 2], choice: ['선택: *수락 / 거절', 4, 8], say: ['> ', 2, 0], think: ['>> ', 3, 0], sys: ['시스템: ', 5, 0] };
+const RP_SNIPS = { quest: ['퀘스트: 제목\n내용: \n보상: \n실패: ', 5, 2], choice: ['선택: *수락 / 거절', 4, 8], say: ['> ', 2, 0], think: ['>> ', 3, 0], sys: ['시스템: ', 5, 0], god: ['@@ ', 3, 0] };
 document.querySelectorAll('[data-rp]').forEach(b => b.addEventListener('click', () => {
   const [text, st, len] = RP_SNIPS[b.dataset.rp];
   insertText(text, true, rpSrc);
@@ -2068,7 +2237,6 @@ $('rpCopy').addEventListener('click', async () => {
     ta.remove();
   }
 });
-rpUpdate();
 
 /* ---------- 움직이는 카오모지 ---------- */
 const KA_PRESETS = {
@@ -2215,6 +2383,276 @@ $('kaGif').addEventListener('click', () => {
 kaRenderPresets();
 
 window.addEventListener('resize', () => { const v = document.body.dataset.view; if (v === 'status') grow(); if (v === 'reply') rpGrow(); if (v === 'kao') kaGrow(); });
+/* ---------- 시스템 문구 모음 ---------- */
+const PHRASES = {
+  '성장': ['레벨이 올랐습니다.', '레벨이 {N} 올랐습니다.', '스탯 포인트 {N}을(를) 획득했습니다.', '{스탯}이(가) {N} 상승했습니다.', '새로운 스킬을 획득했습니다: {스킬명}', '스킬 {스킬명}의 숙련도가 상승했습니다.', '한계를 돌파했습니다.'],
+  '퀘스트': ['새로운 퀘스트가 도착했습니다.', '퀘스트를 완료했습니다.', '퀘스트에 실패했습니다.', '숨겨진 퀘스트를 발견했습니다.', '보상이 지급되었습니다.', '제한 시간이 {N} 남았습니다.', '퀘스트 조건이 변경되었습니다.'],
+  '칭호·업적': ["칭호 '{칭호}'을(를) 획득했습니다.", '업적을 달성했습니다: {업적}', '조건을 충족했습니다.', '특성 {특성}이(가) 개화했습니다.', '최초 달성 보상이 지급됩니다.'],
+  '경고': ['경고! 위험 지역에 진입했습니다.', '체력이 {N}% 이하로 떨어졌습니다.', '정신력이 한계에 도달했습니다.', '알 수 없는 존재가 당신을 주시합니다.', '접근 권한이 없습니다.', '이 이상 진행하면 되돌릴 수 없습니다.'],
+  '아이템': ['{아이템}을(를) 획득했습니다.', '골드 {N}을(를) 획득했습니다.', '인벤토리가 가득 찼습니다.', '{아이템}이(가) 파괴되었습니다.', '감정할 수 없는 물건입니다.'],
+  '시스템': ['각성을 환영합니다.', '시스템을 초기화합니다.', '로그인되었습니다.', '알 수 없는 오류가 발생했습니다.', '데이터를 불러오는 중입니다…', '관리자 권한이 확인되지 않습니다.']
+};
+let phrMine = [];
+try { phrMine = JSON.parse(load('sw-phr-mine', '[]')) || []; } catch (e) { phrMine = []; }
+let phrCat = load('sw-phr-cat', '성장');
+function phrInsert(p) {
+  const ta = lastTA || rpSrc;
+  const line = (ta === rpSrc ? '시스템: ' : '') + p;
+  insertText(line, true, ta);
+  const end = ta.selectionStart, start = end - line.length;
+  const i = line.indexOf('{');
+  if (i >= 0) { const j = line.indexOf('}', i); ta.focus(); ta.setSelectionRange(start + i, start + j + 1); }
+  rpFlash('문구를 넣었어요');
+}
+function phrRender() {
+  const cats = [...Object.keys(PHRASES), '내 것'];
+  if (!cats.includes(phrCat)) phrCat = '성장';
+  const tabs = $('phrTabs'); tabs.innerHTML = '';
+  cats.forEach(c => {
+    const b = document.createElement('button'); b.textContent = c === '내 것' ? `내 것 (${phrMine.length})` : c;
+    if (c === phrCat) b.className = 'on';
+    b.addEventListener('click', () => { phrCat = c; save('sw-phr-cat', c); phrRender(); });
+    tabs.appendChild(b);
+  });
+  const list = $('phrList'); list.innerHTML = '';
+  const items = phrCat === '내 것' ? phrMine : PHRASES[phrCat];
+  if (!items.length) { list.innerHTML = '<span class="sj-ph">아래 칸에 적어서 추가해 보세요 · {이름}처럼 쓰면 넣을 때 그 부분이 선택돼요</span>'; return; }
+  items.forEach((p, i) => {
+    const b = document.createElement('button'); b.className = 'phr'; b.textContent = p;
+    b.addEventListener('click', () => phrInsert(p));
+    if (phrCat === '내 것') {
+      const x = document.createElement('span'); x.className = 'x'; x.textContent = ' ×';
+      x.addEventListener('click', e => { e.stopPropagation(); phrMine.splice(i, 1); save('sw-phr-mine', JSON.stringify(phrMine)); phrRender(); });
+      b.appendChild(x);
+    }
+    list.appendChild(b);
+  });
+}
+function phrAdd() {
+  const v = $('phrInput').value.trim(); if (!v) return;
+  if (!phrMine.includes(v)) phrMine.push(v);
+  save('sw-phr-mine', JSON.stringify(phrMine)); $('phrInput').value = ''; phrCat = '내 것'; save('sw-phr-cat', phrCat); phrRender();
+}
+$('phrAdd').addEventListener('click', phrAdd);
+$('phrInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); phrAdd(); } });
+phrRender();
+
+/* ---------- 깨진 글자 ---------- */
+const GL_UP = [...'̍̎̄̅̿̑̆̐͒͗͑̇̈̊͂̓̈́͊͋͌̃̂̌͐̀́̋̏̒̓̔̽̉ͣͤͥͦͧͨͩͪͫͬͭͮͯ̾͛͆̚'];
+const GL_DOWN = [...'̖̗̘̙̜̝̞̟̠̤̥̦̩̪̫̬̭̮̯̰̱̲̳̹̺̻̼͇͈͉͍͎͓͔͕͖͙͚̣ͅ'];
+const GL_MID = [...'̴̵̶̸̷̡̢̧̨̛̀́̕͘͜͟͢͝͞͠͡'];
+const GL_BLOCK = [...'█▓▒░▚▞▙▟▜▛'];
+const GL_NOISE = [...'҉⸸※⁂⁑⸎⌇⍜⍥⎔⏃⏁⌖⍟'];
+const GL_CP1252 = { 0x80: '€', 0x82: '‚', 0x83: 'ƒ', 0x84: '„', 0x85: '…', 0x86: '†', 0x87: '‡', 0x88: 'ˆ', 0x89: '‰', 0x8A: 'Š', 0x8B: '‹', 0x8C: 'Œ', 0x8E: 'Ž', 0x91: '‘', 0x92: '’', 0x93: '“', 0x94: '”', 0x95: '•', 0x96: '–', 0x97: '—', 0x98: '˜', 0x99: '™', 0x9A: 'š', 0x9B: '›', 0x9C: 'œ', 0x9E: 'ž', 0x9F: 'Ÿ' };
+const GL_STYLES = { zalgo: '위아래로 번지는 글자', block: '블록으로 깨짐 (█▓▒░)', censor: '검열 (■■)', jamo: '자모가 풀림 (ㅅㅣㄴ)', moji: '인코딩 깨짐 (ì‹ )', noise: '이상한 기호가 섞임', mix: '전부 섞기', raw: '그대로 (@@ 표시)' };
+const GL_WRAPS = { none: '괄호 없음', gyeop: '『 』', bold: '【 】', angle: '< >', bracket: '[ ]', at: '@@ … @@' };
+let gl = { style: 'zalgo', level: 3, wrap: 'gyeop', seed: 0, src: '그대는 무엇을 바라는가' };
+try { const r = JSON.parse(load('sw-gl', 'null')); if (r) gl = Object.assign(gl, r); } catch (e) {}
+
+function glRng(str) {
+  let h = 2166136261;
+  for (const ch of str) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  let a = h >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const GL_CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ', GL_JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ', GL_JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+function glJamo(ch) {
+  const c = ch.codePointAt(0) - 0xAC00;
+  if (c < 0 || c > 11171) return ch;
+  return GL_CHO[Math.floor(c / 588)] + GL_JUNG[Math.floor(c % 588 / 28)] + GL_JONG[c % 28];
+}
+function glMoji(ch) {
+  return [...new TextEncoder().encode(ch)].map(b => b < 0x80 ? String.fromCharCode(b) : (GL_CP1252[b] || (b < 0xA0 ? '�' : String.fromCharCode(b)))).join('');
+}
+function glitch(text, style, level, seed) {
+  const r = glRng(text + '|' + style + '|' + level + '|' + seed);
+  const p = level / 6;
+  const pickc = a => a[Math.floor(r() * a.length)];
+  const zal = (ch, lv) => {
+    let s = ch;
+    const n = Math.max(1, Math.round(lv * 1.4));
+    for (let i = 0, k = Math.floor(r() * n) + (lv > 2 ? 1 : 0); i < k; i++) s += pickc(GL_UP);
+    for (let i = 0, k = Math.floor(r() * n) + (lv > 3 ? 1 : 0); i < k; i++) s += pickc(GL_DOWN);
+    if (r() < lv / 8) s += pickc(GL_MID);
+    return s;
+  };
+  if (style === 'raw') return text;
+  return [...text].map(ch => {
+    if (/\s/.test(ch)) return (style === 'noise' || style === 'mix') && r() < p / 3 ? ' ' + pickc(GL_NOISE) : ch;
+    if (style === 'zalgo') return zal(ch, level);
+    if (style === 'block') return r() < p * 0.8 ? pickc(GL_BLOCK) : ch;
+    if (style === 'censor') return r() < p * 0.9 ? '■' : ch;
+    if (style === 'jamo') return r() < p ? glJamo(ch) : ch;
+    if (style === 'moji') return r() < p ? glMoji(ch) : ch;
+    if (style === 'noise') return r() < p * 0.7 ? ch + pickc(GL_NOISE) : ch;
+    const x = r();
+    if (x < p * 0.25) return pickc(GL_BLOCK);
+    if (x < p * 0.45) return glJamo(ch);
+    if (x < p * 0.6) return ch + pickc(GL_NOISE);
+    return zal(ch, Math.max(1, level - 2));
+  }).join('');
+}
+function glWrap(t, w) {
+  return ({ gyeop: `『${t}』`, bold: `【${t}】`, angle: `< ${t} >`, bracket: `[${t}]`, at: `@@${t}@@` })[w] || t;
+}
+const glMake = text => glWrap(glitch(text, gl.style, gl.level, gl.seed), gl.style === 'raw' && gl.wrap === 'none' ? 'at' : gl.wrap);
+
+function glUpdate() {
+  $('glOut').textContent = glMake($('glSrc').value);
+  save('sw-gl', JSON.stringify(gl));
+  if (typeof rpUpdate === 'function') rpUpdate();
+}
+function glFlash(t) { const m = $('glMsg'); m.textContent = t; clearTimeout(glFlash.t); glFlash.t = setTimeout(() => m.textContent = '', 1800); }
+(function glInit() {
+  const fill = (el, o) => Object.entries(o).forEach(([v, l]) => { const x = document.createElement('option'); x.value = v; x.textContent = l; el.appendChild(x); });
+  fill($('glStyle'), GL_STYLES); fill($('glWrap'), GL_WRAPS); fill($('rpGlStyle'), GL_STYLES); fill($('rpGlWrap'), GL_WRAPS);
+  const sync = () => { $('glStyle').value = $('rpGlStyle').value = gl.style; $('glWrap').value = $('rpGlWrap').value = gl.wrap; $('glLevel').value = $('rpGlLevel').value = gl.level; };
+  window.glSync = sync;
+  $('glSrc').value = gl.src;
+  [['glStyle', 'style'], ['rpGlStyle', 'style'], ['glWrap', 'wrap'], ['rpGlWrap', 'wrap']].forEach(([id, k]) => $(id).addEventListener('change', () => { gl[k] = $(id).value; sync(); glUpdate(); }));
+  ['glLevel', 'rpGlLevel'].forEach(id => $(id).addEventListener('input', () => { gl.level = Number($(id).value); sync(); glUpdate(); }));
+  $('glSrc').addEventListener('input', () => { gl.src = $('glSrc').value; glUpdate(); });
+  ['glReroll', 'rpGlReroll'].forEach(id => $(id).addEventListener('click', () => { gl.seed = (gl.seed + 1) % 100000; glUpdate(); }));
+  $('glCopy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('glOut').textContent); glFlash('복사됨'); } catch (e) { glFlash('복사 실패'); }
+  });
+  $('glInsert').addEventListener('click', () => { insertText($('glOut').textContent, false); glFlash('마지막에 쓰던 입력칸에 넣었어요'); });
+  sync();
+})();
+glUpdate();
+
+/* ---------- 캐릭터별 저장 ---------- */
+let chars = [];
+try { chars = JSON.parse(load('sw-chars', '[]')) || []; } catch (e) { chars = []; }
+let chCur = load('sw-ch-cur', '');
+const chSave = () => save('sw-chars', JSON.stringify(chars));
+const chGet = () => chars.find(c => c.id === chCur);
+const chFmt = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function chFlash(t) { const m = $('chMsg'); m.textContent = t; clearTimeout(chFlash.t); chFlash.t = setTimeout(() => m.textContent = '', 2200); }
+
+function chParse(text) {
+  const kv = {}, plain = new Set();
+  text.split('\n').forEach((l, i) => {
+    l = l.trim(); if (!l || i === 0 && !/[:：]/.test(l)) return;
+    const m = l.match(/^[!?]?\s*([^:：]{1,20})[:：]\s*(.*)$/);
+    if (m) { const k = m[1].trim(); (kv[k] = kv[k] || []).push(m[2].trim()); }
+    else if (!/^[\[【『「<〈《〔].*[\]】』」>〉》〕]$/.test(l) && !/^-{3,}$/.test(l)) plain.add(l.replace(/^[-·•]\s*/, ''));
+  });
+  return { kv, plain };
+}
+function chDiff(oldT, newT) {
+  const a = chParse(oldT), b = chParse(newT), out = [];
+  const keys = [...new Set([...Object.keys(a.kv), ...Object.keys(b.kv)])];
+  keys.forEach(k => {
+    const x = a.kv[k] || [], y = b.kv[k] || [];
+    if (x.length === 1 && y.length === 1) { if (x[0] !== y[0]) out.push(`${k} : ${x[0]} → ${y[0]}`); return; }
+    y.filter(v => !x.includes(v)).forEach(v => out.push(`＋ ${k} : ${v}`));
+    x.filter(v => !y.includes(v)).forEach(v => out.push(`－ ${k} : ${v}`));
+  });
+  [...b.plain].filter(v => !a.plain.has(v)).forEach(v => out.push(`＋ ${v}`));
+  [...a.plain].filter(v => !b.plain.has(v)).forEach(v => out.push(`－ ${v}`));
+  return out;
+}
+
+function chRender() {
+  const sel = $('chSel'); sel.innerHTML = '';
+  if (!chars.length) { const o = document.createElement('option'); o.value = ''; o.textContent = '아직 없음 — 새 캐릭터를 만드세요'; sel.appendChild(o); }
+  chars.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = `${c.name} (${c.entries.length})`; sel.appendChild(o); });
+  if (!chGet() && chars.length) chCur = chars[0].id;
+  sel.value = chCur || '';
+  const cur = chGet();
+  $('chName').textContent = cur ? cur.name : '';
+  const list = $('chList'); list.innerHTML = '';
+  if (!cur) return;
+  if (!cur.entries.length) { list.innerHTML = '<div class="sj-ph" style="padding:6px 0">아직 저장한 기록이 없어요</div>'; return; }
+  [...cur.entries].reverse().forEach((e, ri) => {
+    const idx = cur.entries.length - 1 - ri;
+    const row = document.createElement('div'); row.className = 'ch-row';
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = `${e.memo || '메모 없음'} · ${chFmt(e.t)}`;
+    const ld = document.createElement('button'); ld.textContent = '불러오기';
+    ld.addEventListener('click', () => {
+      src.value = e.src;
+      if (e.sel) { sel_apply(e.preset, e.sel); }
+      update(); chFlash(`불러옴: ${e.memo || chFmt(e.t)}`);
+    });
+    row.appendChild(nm); row.appendChild(ld);
+    if (idx > 0) {
+      const cp = document.createElement('button'); cp.textContent = '직전과 비교';
+      cp.addEventListener('click', () => {
+        const d = chDiff(cur.entries[idx - 1].src, e.src);
+        $('chDiff').textContent = `${cur.entries[idx - 1].memo || chFmt(cur.entries[idx - 1].t)} → ${e.memo || chFmt(e.t)}\n` + (d.length ? d.join('\n') : '바뀐 항목 없음');
+        $('chDiff').hidden = false;
+      });
+      row.appendChild(cp);
+    }
+    const x = document.createElement('button'); x.textContent = '×'; x.className = 'x';
+    x.addEventListener('click', () => {
+      if (x.textContent === '×') { x.textContent = '삭제?'; setTimeout(() => x.textContent = '×', 2500); return; }
+      cur.entries.splice(idx, 1); chSave(); chRender();
+    });
+    row.appendChild(x);
+    list.appendChild(row);
+  });
+}
+function sel_apply(p, s) { preset = p || 'custom'; sel = pick(s); syncMix(); }
+
+$('chSel').addEventListener('change', () => { chCur = $('chSel').value; save('sw-ch-cur', chCur); $('chDiff').hidden = true; chRender(); });
+$('chNew').addEventListener('click', () => { $('chNewBox').hidden = !$('chNewBox').hidden; if (!$('chNewBox').hidden) $('chNewName').focus(); });
+function chCreate() {
+  const name = $('chNewName').value.trim(); if (!name) { $('chNewName').focus(); return; }
+  const c = { id: Date.now().toString(36), name: name.slice(0, 20), entries: [] };
+  chars.push(c); chCur = c.id; save('sw-ch-cur', chCur); chSave();
+  $('chNewName').value = ''; $('chNewBox').hidden = true; chRender(); chFlash(`'${c.name}' 만들었어요`);
+}
+$('chNewDo').addEventListener('click', chCreate);
+$('chNewName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); chCreate(); } });
+$('chSaveNow').addEventListener('click', () => {
+  const cur = chGet(); if (!cur) { chFlash('먼저 캐릭터를 만드세요'); $('chNewBox').hidden = false; return; }
+  if (!src.value.trim()) { chFlash('저장할 내용이 없어요'); return; }
+  cur.entries.push({ t: Date.now(), memo: $('chMemo').value.trim().slice(0, 30), src: src.value, preset, sel: pick(sel) });
+  chSave(); $('chMemo').value = ''; chRender(); chFlash(`${cur.name}에 저장했어요`);
+});
+$('chDelChar').addEventListener('click', () => {
+  const cur = chGet(); if (!cur) return;
+  const b = $('chDelChar');
+  if (!b.dataset.ask) { b.dataset.ask = '1'; b.textContent = `정말 '${cur.name}' 전부 삭제?`; setTimeout(() => { delete b.dataset.ask; b.textContent = '캐릭터 삭제'; }, 3000); return; }
+  delete b.dataset.ask; b.textContent = '캐릭터 삭제';
+  chars = chars.filter(c => c.id !== cur.id); chCur = chars[0] ? chars[0].id : ''; save('sw-ch-cur', chCur); chSave(); chRender();
+});
+$('chExport').addEventListener('click', () => {
+  const data = { app: 'status-window', v: 1, savedAt: new Date().toISOString(), chars, statusPresets: mine, kaoMine, kaMine };
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  const d = new Date(); a.href = url; a.download = `상태창-백업-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
+  chFlash('백업 파일을 저장했어요');
+});
+$('chImport').addEventListener('click', () => $('chFile').click());
+$('chFile').addEventListener('change', async () => {
+  const f = $('chFile').files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!data || !Array.isArray(data.chars)) throw 0;
+    let added = 0;
+    data.chars.forEach(c => {
+      const ex = chars.find(x => x.name === c.name);
+      if (!ex) { chars.push(c); added += c.entries.length; return; }
+      c.entries.forEach(e => { if (!ex.entries.some(y => y.t === e.t)) { ex.entries.push(e); added++; } });
+      ex.entries.sort((a, b) => a.t - b.t);
+    });
+    if (Array.isArray(data.statusPresets)) data.statusPresets.forEach(p => { if (!mine.some(m => m.name === p.name)) mine.push(p); });
+    if (Array.isArray(data.kaoMine)) data.kaoMine.forEach(k => { if (!kaoMine.includes(k)) kaoMine.push(k); });
+    if (Array.isArray(data.kaMine)) data.kaMine.forEach(k => { if (!kaMine.some(m => m.name === k.name)) kaMine.push(k); });
+    chSave(); save('sw3-mine', JSON.stringify(mine)); save('sw-kao-mine', JSON.stringify(kaoMine)); save('sw-ka-mine', JSON.stringify(kaMine));
+    if (!chGet() && chars.length) chCur = chars[0].id;
+    chRender(); renderStyles(); kaoRender(); kaRenderPresets();
+    chFlash(`백업을 합쳤어요 (기록 ${added}개 추가)`);
+  } catch (e) { chFlash('이 파일은 백업 파일이 아니에요'); }
+  $('chFile').value = '';
+});
+chRender();
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(() => {});
 setView('home');
 update();
 </script>
