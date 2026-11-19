@@ -1,0 +1,16 @@
+{
+  "id": "./status",
+  "name": "작가의 상태창",
+  "short_name": "상태창",
+  "description": "웹소설용 상태창·퀘스트창·소재 뽑기·마법진·카오모지 도구",
+  "start_url": "./%EC%83%81%ED%83%9C%EC%B0%BD.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#15151a",
+  "theme_color": "#15151a",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
