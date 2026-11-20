@@ -62,6 +62,12 @@
   .sj-links { display: flex; gap: 14px; margin-top: 10px; font-size: 13px; }
   .sj-links span { color: #7e9fc8; cursor: pointer; }
   .sj-links span.danger { color: #F09595; }
+  .sj-def { font-size: 11px; opacity: .6; max-width: 150px; text-align: center; line-height: 1.35; }
+  .dj-group { font-size: 12px; opacity: .6; margin: 12px 0 6px; }
+  .dj-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dj-chips button { font-size: 13px; padding: 6px 11px; border-radius: 999px; }
+  .dj-chips button.on { border-color: #c8a97e; color: #c8a97e; background: rgba(200,169,126,.08); }
+  .dj-credit { font-size: 11px; opacity: .5; line-height: 1.6; margin-top: 12px; }
   select { font-size: 15px; padding: 8px 10px; border: 1px solid #5f5e5a; border-radius: 8px; background: #2a2a30; color: #ecebe6; width: 100%; font-family: inherit; }
   .opts { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
   label.opt { font-size: 14px; display: flex; align-items: center; gap: 6px; }
@@ -343,6 +349,20 @@
         <button class="pill" id="sjInsertAll">결과 전부 넣기</button>
         <span style="font-size:12px;opacity:.55">(카테고리별이면 "카테고리: 단어"로 들어가요)</span>
       </div>
+
+      <details id="djBox" style="margin-top:12px">
+        <summary><span>사전 단어 섞기 <b id="djSum"></b></span></summary>
+        <div class="inner">
+          <div class="sj-row" style="margin-top:0">
+            <label class="opt"><input type="checkbox" id="djOn"> 사전 단어도 같이 뽑기</label>
+            <label class="opt"><input type="checkbox" id="djOnly"> 내 단어는 빼기</label>
+          </div>
+          <div id="djCats"></div>
+          <div class="sj-row"><button class="pill" id="djAll">전부 고르기</button><button class="pill" id="djNone">전부 풀기</button></div>
+          <div class="sj-msg" id="djMsg"></div>
+          <div class="dj-credit">사전 단어 출처: 국립국어원 한국어기초사전·표준국어대사전·우리말샘·우리말어휘역사사전 (CC BY-SA 2.0 KR). 분야별로 골라 뜻풀이를 짧게 줄였어요.</div>
+        </div>
+      </details>
 
       <div class="sj-tabs" id="sjTabs"></div>
       <div class="sj-words" id="sjWords"></div>
@@ -1639,12 +1659,74 @@ function sjRender() {
 
 function sjShuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-function sjRoll() {
+/* 사전 단어 */
+let dj = { on: false, only: false, cats: [] };
+try { const r = JSON.parse(load('sw-dj', 'null')); if (r) dj = Object.assign(dj, r); } catch (e) {}
+const djSave = () => save('sw-dj', JSON.stringify(dj));
+let djPromise = null;
+function djLoad() {
+  if (window.DICT_WORDS) return Promise.resolve(window.DICT_WORDS);
+  if (djPromise) return djPromise;
+  djPromise = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = 'dict-words.js';
+    sc.onload = () => window.DICT_WORDS ? res(window.DICT_WORDS) : rej();
+    sc.onerror = () => { djPromise = null; rej(); };
+    document.head.appendChild(sc);
+  });
+  return djPromise;
+}
+function djMsg(t) { $('djMsg').textContent = t; }
+function djRender() {
+  $('djOn').checked = dj.on; $('djOnly').checked = dj.only;
+  const box = $('djCats');
+  const D = window.DICT_WORDS;
+  if (!D) { box.innerHTML = '<div class="sj-ph" style="padding:8px 0">펼치면 사전 단어 목록을 불러와요</div>'; $('djSum').textContent = dj.on ? '켜짐' : ''; return; }
+  box.innerHTML = '';
+  let total = 0;
+  D.groups.forEach(g => {
+    const h = document.createElement('div'); h.className = 'dj-group'; h.textContent = g.name + (g.note ? ` · ${g.note}` : ''); box.appendChild(h);
+    const row = document.createElement('div'); row.className = 'dj-chips';
+    Object.entries(g.cats).forEach(([cn, words]) => {
+      const key = g.name + '/' + cn, on = dj.cats.includes(key);
+      if (on) total += words.length;
+      const b = document.createElement('button'); b.textContent = `${cn} ${words.length.toLocaleString()}`; if (on) b.className = 'on';
+      b.addEventListener('click', () => { dj.cats = on ? dj.cats.filter(k => k !== key) : [...dj.cats, key]; djSave(); djRender(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+  });
+  $('djSum').textContent = dj.on ? `켜짐 · ${dj.cats.length}분야 ${total.toLocaleString()}개` : '';
+}
+function djSources() {
+  const D = window.DICT_WORDS; if (!D || !dj.on) return [];
+  const out = [];
+  D.groups.forEach(g => Object.entries(g.cats).forEach(([cn, words]) => { if (dj.cats.includes(g.name + '/' + cn)) out.push({ name: cn, words }); }));
+  return out;
+}
+$('djBox').addEventListener('toggle', () => { if ($('djBox').open && !window.DICT_WORDS) { djMsg('불러오는 중…'); djLoad().then(() => { djMsg(''); djRender(); }).catch(() => djMsg('사전 파일(dict-words.js)을 못 찾았어요. 상태창 파일과 같은 폴더에 있어야 해요.')); } });
+$('djOn').addEventListener('change', () => { dj.on = $('djOn').checked; if (dj.on && !dj.cats.length && window.DICT_WORDS) dj.cats = Object.keys(window.DICT_WORDS.groups[0].cats).map(c => window.DICT_WORDS.groups[0].name + '/' + c).slice(0, 4); djSave(); djRender(); });
+$('djOnly').addEventListener('change', () => { dj.only = $('djOnly').checked; djSave(); djRender(); });
+$('djAll').addEventListener('click', () => { const D = window.DICT_WORDS; if (!D) return; dj.cats = D.groups.flatMap(g => Object.keys(g.cats).map(c => g.name + '/' + c)); djSave(); djRender(); });
+$('djNone').addEventListener('click', () => { dj.cats = []; djSave(); djRender(); });
+
+async function sjRoll() {
+  if (dj.on && !window.DICT_WORDS) { sjFlash('사전 불러오는 중…'); try { await djLoad(); djRender(); } catch (e) { sjFlash('사전 파일을 못 불러왔어요'); } }
+  const mine = dj.on && dj.only ? [] : sj.categories.filter(c => c.words.length).map(c => ({ name: c.name, words: c.words.map(w => [w, '']) }));
+  const srcs = [...mine, ...djSources()].filter(c => c.words.length);
+  const pick1 = a => a[Math.floor(Math.random() * a.length)];
   if (sj.mode === 'category') {
-    sjLast = sj.categories.filter(c => c.words.length).map(c => ({ cat: c.name, word: c.words[Math.floor(Math.random() * c.words.length)] }));
+    sjLast = srcs.map(c => { const [w, d] = pick1(c.words); return { cat: c.name, word: w, def: d }; });
   } else {
-    const all = sj.categories.flatMap(c => c.words);
-    sjLast = sjShuffle(all).slice(0, Math.min(sj.count, all.length)).map(w => ({ cat: null, word: w }));
+    const total = srcs.reduce((n, c) => n + c.words.length, 0);
+    const n = Math.min(sj.count, total), seen = new Set(); sjLast = [];
+    let guard = 0;
+    while (sjLast.length < n && guard++ < n * 50) {
+      let r = Math.floor(Math.random() * total), c = 0;
+      while (r >= srcs[c].words.length) { r -= srcs[c].words.length; c++; }
+      const [w, d] = srcs[c].words[r];
+      if (seen.has(w)) continue; seen.add(w);
+      sjLast.push({ cat: null, word: w, def: d });
+    }
   }
   const res = $('sjRes'); res.innerHTML = '';
   if (!sjLast.length) { res.innerHTML = '<span class="sj-ph">단어가 없어요</span>'; return; }
@@ -1653,13 +1735,16 @@ function sjRoll() {
     if (r.cat) { const sm = document.createElement('small'); sm.textContent = r.cat; it.appendChild(sm); }
     const b = document.createElement('button'); b.className = 'sj-word'; b.textContent = r.word;
     b.addEventListener('click', () => { insertText(r.word, false); sjFlash(`넣음: ${r.word}`); });
-    it.appendChild(b); res.appendChild(it);
+    it.appendChild(b);
+    if (r.def) { const d = document.createElement('div'); d.className = 'sj-def'; d.textContent = r.def; it.appendChild(d); }
+    res.appendChild(it);
   });
 }
+djRender();
 
 $('sjModeCat').addEventListener('click', () => { sj.mode = 'category'; sjSave(); sjRender(); });
 $('sjModeAll').addEventListener('click', () => { sj.mode = 'all'; sjSave(); sjRender(); });
-const sjTotal = () => sj.categories.reduce((n, c) => n + c.words.length, 0);
+const sjTotal = () => sj.categories.reduce((n, c) => n + c.words.length, 0) + djSources().reduce((n, c) => n + c.words.length, 0);
 $('sjMinus').addEventListener('click', () => { sj.count = Math.max(1, sj.count - 1); sjSave(); sjRender(); });
 $('sjPlus').addEventListener('click', () => { sj.count = Math.max(1, Math.min(sjTotal() || 1, sj.count + 1)); sjSave(); sjRender(); });
 $('sjRoll').addEventListener('click', sjRoll);

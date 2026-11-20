@@ -1,5 +1,5 @@
-const CACHE = 'sojae-v2';
-const ASSETS = ['./index.html', './manifest.json', './상태창.html', './manifest-status.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'sojae-v3';
+const ASSETS = ['./index.html', './manifest.json', './상태창.html', './manifest-status.json', './dict-words.js', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.all(ASSETS.map(a => c.add(a).catch(() => {})))));
